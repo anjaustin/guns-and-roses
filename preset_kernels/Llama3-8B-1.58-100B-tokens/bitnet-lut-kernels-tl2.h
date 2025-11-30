@@ -101,6 +101,9 @@ inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_t
     __m256 vec_lut[16];
     const __m256i vec_bi = _mm256_set_epi32(84, 72, 60, 48, 36, 24, 12, 0);
     float scales = *lut_scales;
+    // Ordered dithering pattern - decorrelates quantization error
+    const __m256 vec_dither_0 = _mm256_set_ps(0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f);
+    const __m256 vec_dither_1 = _mm256_set_ps(-0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f);
     __m256i shuffle_mask = _mm256_set_epi8(
                                             0x0f, 0x0d, 0x0b, 0x09, 0x07, 0x05, 0x03, 0x01,
                                             0x0e, 0x0c, 0x0a, 0x08, 0x06, 0x04, 0x02, 0x00,

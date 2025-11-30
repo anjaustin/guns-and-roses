@@ -108,6 +108,9 @@ inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_t
     __m256i vec_lut[16];\n\
     const __m256i vec_bi = _mm256_set_epi32(84, 72, 60, 48, 36, 24, 12, 0);\n\
     float scales = *lut_scales;\n\
+    // Ordered dithering pattern - decorrelates quantization error\n\
+    const __m256 vec_dither_0 = _mm256_set_ps(0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f);\n\
+    const __m256 vec_dither_1 = _mm256_set_ps(-0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f);\n\
     __m256i shuffle_mask = _mm256_set_epi8(\n\
                                             0x0f, 0x0d, 0x0b, 0x09, 0x07, 0x05, 0x03, 0x01,\n\
                                             0x0e, 0x0c, 0x0a, 0x08, 0x06, 0x04, 0x02, 0x00,\n\
@@ -120,9 +123,13 @@ inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_t
         __m256 vec_b1 = _mm256_i32gather_ps(b + k * 24 + 1, vec_bi, 1);\n\
         __m256 vec_b2 = _mm256_i32gather_ps(b + k * 24 + 2, vec_bi, 1);\n\
 \n\
-        __m256i vec_b0i = _mm256_cvtps_epi32(_mm256_round_ps(_mm256_mul_ps(vec_b0, _mm256_set1_ps(scales)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
-        __m256i vec_b1i = _mm256_cvtps_epi32(_mm256_round_ps(_mm256_mul_ps(vec_b1, _mm256_set1_ps(scales)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
-        __m256i vec_b2i = _mm256_cvtps_epi32(_mm256_round_ps(_mm256_mul_ps(vec_b2, _mm256_set1_ps(scales)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
+        // Apply ordered dithering before quantization\n\
+        __m256 vec_b0d = _mm256_add_ps(_mm256_mul_ps(vec_b0, _mm256_set1_ps(scales)), vec_dither_0);\n\
+        __m256 vec_b1d = _mm256_add_ps(_mm256_mul_ps(vec_b1, _mm256_set1_ps(scales)), vec_dither_1);\n\
+        __m256 vec_b2d = _mm256_add_ps(_mm256_mul_ps(vec_b2, _mm256_set1_ps(scales)), vec_dither_0);\n\
+        __m256i vec_b0i = _mm256_cvtps_epi32(_mm256_round_ps(vec_b0d, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
+        __m256i vec_b1i = _mm256_cvtps_epi32(_mm256_round_ps(vec_b1d, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
+        __m256i vec_b2i = _mm256_cvtps_epi32(_mm256_round_ps(vec_b2d, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
 \n\
         vec_lut[15] = _mm256_setzero_si256();\n\
         vec_lut[14] = _mm256_setzero_si256();\n\
@@ -194,6 +201,9 @@ inline int32_t two_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_typ
     __m256i vec_lut[16];\n\
     const __m256i vec_bi = _mm256_set_epi32(56, 48, 40, 32, 24, 16, 8, 0);\n\
     float scales = *lut_scales;\n\
+    // Ordered dithering pattern - decorrelates quantization error\n\
+    const __m256 vec_dither_0 = _mm256_set_ps(0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f);\n\
+    const __m256 vec_dither_1 = _mm256_set_ps(-0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f);\n\
     __m256i shuffle_mask = _mm256_set_epi8(\n\
                                             0x0f, 0x0d, 0x0b, 0x09, 0x07, 0x05, 0x03, 0x01,\n\
                                             0x0e, 0x0c, 0x0a, 0x08, 0x06, 0x04, 0x02, 0x00,\n\
@@ -205,8 +215,11 @@ inline int32_t two_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_typ
         __m256 vec_b0f = _mm256_i32gather_ps(b + k * 16 + 0, vec_bi, 1);\n\
         __m256 vec_b1f = _mm256_i32gather_ps(b + k * 16 + 1, vec_bi, 1);\n\
 \n\
-        __m256i vec_b0 = _mm256_cvtps_epi32(_mm256_round_ps(_mm256_mul_ps(vec_b0f, _mm256_set1_ps(scales)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
-        __m256i vec_b1 = _mm256_cvtps_epi32(_mm256_round_ps(_mm256_mul_ps(vec_b1f, _mm256_set1_ps(scales)), _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
+        // Apply ordered dithering before quantization\n\
+        __m256 vec_b0d = _mm256_add_ps(_mm256_mul_ps(vec_b0f, _mm256_set1_ps(scales)), vec_dither_0);\n\
+        __m256 vec_b1d = _mm256_add_ps(_mm256_mul_ps(vec_b1f, _mm256_set1_ps(scales)), vec_dither_1);\n\
+        __m256i vec_b0 = _mm256_cvtps_epi32(_mm256_round_ps(vec_b0d, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
+        __m256i vec_b1 = _mm256_cvtps_epi32(_mm256_round_ps(vec_b1d, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));\n\
         vec_lut[15] = _mm256_setzero_si256();\n\
         vec_lut[14] = _mm256_setzero_si256();\n\
         vec_lut[13] = _mm256_setzero_si256();\n\

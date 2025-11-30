@@ -102,6 +102,11 @@ inline void lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_
 #ifdef __ARM_NEON\n\
     int16x8_t vec_lut[16];\n\
     float32_t scales = *lut_scales;\n\
+    // Ordered dithering offsets - decorrelates quantization error\n\
+    // Pattern: [-0.25, 0.25, 0.25, -0.25] repeating, normalized by scale\n\
+    const float32_t dither_magnitude = 0.25f;\n\
+    const float32x4_t vec_dither_0 = {{ -dither_magnitude, dither_magnitude, -dither_magnitude, dither_magnitude }};\n\
+    const float32x4_t vec_dither_1 = {{ dither_magnitude, -dither_magnitude, dither_magnitude, -dither_magnitude }};\n\
         uint8_t tbl_mask[16];\n\
         tbl_mask[0] = 0;\n\
         tbl_mask[1] = 2;\n\
@@ -128,6 +133,11 @@ inline void lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_
         float32x4_t vec_f_1 = vmulq_n_f32(vec_bs_x0.val[1], scales);\n\
         float32x4_t vec_f_2 = vmulq_n_f32(vec_bs_x1.val[0], scales);\n\
         float32x4_t vec_f_3 = vmulq_n_f32(vec_bs_x1.val[1], scales);\n\
+        // Apply ordered dithering before quantization\n\
+        vec_f_0 = vaddq_f32(vec_f_0, vec_dither_0);\n\
+        vec_f_1 = vaddq_f32(vec_f_1, vec_dither_1);\n\
+        vec_f_2 = vaddq_f32(vec_f_2, vec_dither_0);\n\
+        vec_f_3 = vaddq_f32(vec_f_3, vec_dither_1);\n\
         int32x4_t vec_b_0 = vcvtnq_s32_f32(vec_f_0);\n\
         int32x4_t vec_b_1 = vcvtnq_s32_f32(vec_f_1);\n\
         int32x4_t vec_b_2 = vcvtnq_s32_f32(vec_f_2);\n\

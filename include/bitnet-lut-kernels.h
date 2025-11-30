@@ -100,12 +100,12 @@ inline int32_t partial_max_reset(int32_t bs, void* lut_scales_) {
 template<int act_k>
 inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_scales) {
 #if defined __AVX2__
-    __m256 vec_lut[16];
+    __m256i vec_lut[16];
     const __m256i vec_bi = _mm256_set_epi32(84, 72, 60, 48, 36, 24, 12, 0);
     float scales = *lut_scales;
     // Ordered dithering pattern - decorrelates quantization error
-    const __m256 vec_dither_0 = _mm256_set_ps(0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f);
-    const __m256 vec_dither_1 = _mm256_set_ps(-0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f);
+    const __m256 vec_dither_0 = _mm256_set_ps(0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f);
+    const __m256 vec_dither_1 = _mm256_set_ps(-0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f);
     __m256i shuffle_mask = _mm256_set_epi8(
                                             0x0f, 0x0d, 0x0b, 0x09, 0x07, 0x05, 0x03, 0x01,
                                             0x0e, 0x0c, 0x0a, 0x08, 0x06, 0x04, 0x02, 0x00,
@@ -193,12 +193,12 @@ inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_t
 template<int act_k>
 inline int32_t two_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_scales) {
 #if defined __AVX2__
-    __m256 vec_lut[16];
+    __m256i vec_lut[16];
     const __m256i vec_bi = _mm256_set_epi32(56, 48, 40, 32, 24, 16, 8, 0);
     float scales = *lut_scales;
     // Ordered dithering pattern - decorrelates quantization error
-    const __m256 vec_dither_0 = _mm256_set_ps(0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f);
-    const __m256 vec_dither_1 = _mm256_set_ps(-0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f, -0.25f, 0.25f);
+    const __m256 vec_dither_0 = _mm256_set_ps(0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f);
+    const __m256 vec_dither_1 = _mm256_set_ps(-0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f, -0.1618f, 0.1618f);
     __m256i shuffle_mask = _mm256_set_epi8(
                                             0x0f, 0x0d, 0x0b, 0x09, 0x07, 0x05, 0x03, 0x01,
                                             0x0e, 0x0c, 0x0a, 0x08, 0x06, 0x04, 0x02, 0x00,
@@ -1167,7 +1167,9 @@ else if (m == 4096 && k == 1536) {
 
     scales = (bitnet_float_type *) aligned_malloc(sizeof(bitnet_float_type));
     qweights = (uint8_t *) tensor->data;
-    float * i2_scales = (float * )(qweights + k * m / 4);
+    int nbytes = (k - 256) * m / 3 * 5 / 8 + 256 * m / 2 * 4 / 8;
+    if (nbytes % 32 != 0) nbytes = 32 - nbytes % 32 + nbytes;
+    float * i2_scales = (float * )(qweights + nbytes);
     scales[0] = (bitnet_float_type) i2_scales[0];
 
     tensor->extra = bitnet_tensor_extras + bitnet_tensor_extras_index;
